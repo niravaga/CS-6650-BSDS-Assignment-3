@@ -33,7 +33,7 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 public class KafkaPublisherResource {
 
     static AmazonDynamoDBClient dynamoDB;
-    static UUID publisherId;
+    private UUID publisherId;
 
     @POST
     @Consumes(MediaType.TEXT_PLAIN)

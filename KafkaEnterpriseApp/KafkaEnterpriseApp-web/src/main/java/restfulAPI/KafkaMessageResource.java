@@ -107,14 +107,13 @@ public class KafkaMessageResource {
             DynamoDB db = new DynamoDB(dynamoDB);
             Table table = db.getTable(tableName);
             Item item = table.getItem("id", publisherId);
-            System.out.println("Item " + item);
-            String topic = item.asMap().get("topic").toString();
-            System.out.println("Topic: " + topic);
-            return topic;
+//            System.out.println("Item " + item);
 
-//            key.put("id", new AttributeValue(Integer.toString(publisherId)));
-//            GetItemResult getItemResult = dynamoDB.getItem(tableName, key);
-//            System.err.println(getItemResult.getItem().get("topic"));
+            if (item != null) {
+                String topic = item.asMap().get("topic").toString();
+//                System.out.println("Topic: " + topic);
+                return topic;
+            }
         } catch (AmazonServiceException ase) {
             System.out.println("Caught an AmazonServiceException, which means your request made it "
                     + "to AWS, but was rejected with an error response for some reason.");
