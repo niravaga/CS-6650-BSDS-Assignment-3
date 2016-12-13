@@ -2,3 +2,4 @@ restfulAPI\PingTest.class
 restfulAPI\ApplicationConfig.class
 restfulAPI\KafkaMessageResource.class
 restfulAPI\KafkaPublisherResource.class
+restfulAPI\KafkaSubscriberResource.class

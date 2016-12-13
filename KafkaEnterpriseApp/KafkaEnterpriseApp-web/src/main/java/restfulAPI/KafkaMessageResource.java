@@ -39,9 +39,9 @@ import static restfulAPI.KafkaSubscriberResource.dynamoDB;
 @Path("/message")
 public class KafkaMessageResource {
 
-    static AmazonDynamoDBClient dynamoDB;
-//    @EJB
-//    private com.candidcoders.KafkaMessageBeanRemote kafkaMessageBean;
+    static AmazonDynamoDBClient dynamoDB = null;
+    static Properties producerProperties = null;
+    static Producer<String, String> producer = null;
 
     /**
      * Retrieves representation of an instance of helloworld.PublisherResource
@@ -54,60 +54,35 @@ public class KafkaMessageResource {
     @Consumes(MediaType.TEXT_PLAIN)
     @Produces(MediaType.TEXT_PLAIN)
     public String addMessage(@QueryParam("publisherId") String publisherId, String message) {
-        System.out.println("Sending from web");
 
-        Properties props = new Properties();
-        props.put("bootstrap.servers", "localhost:9092");
-        props.put("acks", "all");
-        props.put("retries", 0);
-        props.put("batch.size", 16384);
-        props.put("linger.ms", 1);
-        props.put("buffer.memory", 33554432);
-        props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
-        props.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+        if (producerProperties == null) {
+            initProducerProperties();
+        }
 
-        System.out.println("Sending bean messages");
-        try (Producer<String, String> producer = new KafkaProducer<String, String>(props)) {
+        String topic = getPublisherTopic(publisherId);
 
-            String topic = getPublisherTopic(publisherId);
+        if (topic != null && !topic.isEmpty()) {
+            ProducerRecord<String, String> record = new ProducerRecord<>(topic, message);
 
-            if (topic != null && !topic.isEmpty()) {
-                ProducerRecord<String, String> record = new ProducerRecord<>(topic, message);
-
-                producer.send(record);
-            } else {
-                System.err.println("No Topic found for given publisher ID");
-            }
+            producer.send(record);
+        } else {
+            System.err.println("No Topic found for given publisher ID");
         }
 
         return "Success";
     }
 
     private String getPublisherTopic(String publisherId) {
-        System.out.println("Getting publisher topic for id: " + publisherId);
-
-        AWSCredentials credentials = null;
-
-        try {
-            credentials = new ProfileCredentialsProvider("default").getCredentials();
-        } catch (Exception e) {
-            throw new AmazonClientException(
-                    "Cannot load the credentials from the credential profiles file. "
-                    + "Please make sure that your credentials file is at the correct "
-                    + "location (C:\\Users\\nirav\\.aws\\credentials), and is in valid format.",
-                    e);
+        
+        if (dynamoDB == null) {
+            initializeDynamoDBCredentials();
         }
-        dynamoDB = new AmazonDynamoDBClient(credentials);
-        Region usWest2 = Region.getRegion(Regions.US_WEST_2);
-        dynamoDB.setRegion(usWest2);
 
         String tableName = "publisher";
         try {
-//            Map<String, AttributeValue> key = new HashMap<>();
             DynamoDB db = new DynamoDB(dynamoDB);
             Table table = db.getTable(tableName);
             Item item = table.getItem("id", publisherId);
-//            System.out.println("Item " + item);
 
             if (item != null) {
                 String topic = item.asMap().get("topic").toString();
@@ -140,10 +115,7 @@ public class KafkaMessageResource {
 
         String subscribedTopic = (String) subscriberDetails.get("topic");
 
-        System.out.println("Topic: " + subscribedTopic);
         long offset = Long.parseLong((String) subscriberDetails.get("offset"));
-
-        System.out.println("Offset:" + offset);
 
         Properties props = new Properties();
         props.put("bootstrap.servers", "localhost:9092");
@@ -155,19 +127,14 @@ public class KafkaMessageResource {
         props.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
         KafkaConsumer<String, String> consumer = new KafkaConsumer<>(props);
         TopicPartition partition = new TopicPartition(subscribedTopic, 0);
-//        consumer.subscribe(Arrays.asList(subscribedTopic));
         consumer.assign(Arrays.asList(partition));
-//        consumer.seekToBeginning(Arrays.asList(partition));
 
         if (offset == 0) {
-//            consumer.seek(partition, offset);
             consumer.seekToBeginning(Arrays.asList(partition));
         }
 
-        System.out.println("Position: " + consumer.position(partition));
         ConsumerRecords<String, String> records = consumer.poll(1000);
 
-        System.out.println("Polled");
         String message = "";
 
         System.out.println("NumRecords: " + records.count());
@@ -178,37 +145,22 @@ public class KafkaMessageResource {
         if (offset == 0) {
             updateSuscriberDetails(subscriberId, subscribedTopic, "1");
         }
-        System.out.println("Message:" + message);
         consumer.commitSync();
         consumer.close();
         return message;
     }
 
     private Map<String, Object> getSubscriberDetails(String subscriberId) {
-        System.out.println("Getting subscriber topic for id: " + subscriberId);
 
-        AWSCredentials credentials = null;
-
-        try {
-            credentials = new ProfileCredentialsProvider("default").getCredentials();
-        } catch (Exception e) {
-            throw new AmazonClientException(
-                    "Cannot load the credentials from the credential profiles file. "
-                    + "Please make sure that your credentials file is at the correct "
-                    + "location (C:\\Users\\nirav\\.aws\\credentials), and is in valid format.",
-                    e);
+        if (dynamoDB == null) {
+            initializeDynamoDBCredentials();
         }
-        dynamoDB = new AmazonDynamoDBClient(credentials);
-        Region usWest2 = Region.getRegion(Regions.US_WEST_2);
-        dynamoDB.setRegion(usWest2);
 
         String tableName = "subscriber";
         try {
-//            Map<String, AttributeValue> key = new HashMap<>();
             DynamoDB db = new DynamoDB(dynamoDB);
             Table table = db.getTable(tableName);
             Item item = table.getItem("id", subscriberId);
-            System.out.println("Item " + item);
 
             if (item != null) {
                 return item.asMap();
@@ -236,7 +188,6 @@ public class KafkaMessageResource {
         String tableName = "subscriber";
         try {
 //            Map<String, AttributeValue> key = new HashMap<>();
-            System.out.println("Updating id:" + subscriberId + "to offset:" + offset);
             Map<String, AttributeValue> item = newItem(subscriberId, topic, offset);
             PutItemRequest putItemRequest = new PutItemRequest(tableName, item);
             PutItemResult putItemResult = dynamoDB.putItem(putItemRequest);
@@ -263,5 +214,35 @@ public class KafkaMessageResource {
         item.put("topic", new AttributeValue(topic));
         item.put("offset", new AttributeValue(offset));
         return item;
+    }
+    
+    private void initProducerProperties() {
+        producerProperties = new Properties();
+        producerProperties.put("bootstrap.servers", "localhost:9092");
+        producerProperties.put("acks", "all");
+        producerProperties.put("retries", 0);
+        producerProperties.put("batch.size", 16384);
+        producerProperties.put("linger.ms", 1);
+        producerProperties.put("buffer.memory", 33554432);
+        producerProperties.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+        producerProperties.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+        producer = new KafkaProducer<>(producerProperties);
+    }
+    
+    private void initializeDynamoDBCredentials() {
+        AWSCredentials credentials = null;
+
+        try {
+            credentials = new ProfileCredentialsProvider("default").getCredentials();
+        } catch (Exception e) {
+            throw new AmazonClientException(
+                    "Cannot load the credentials from the credential profiles file. "
+                    + "Please make sure that your credentials file is at the correct "
+                    + "location (C:\\Users\\nirav\\.aws\\credentials), and is in valid format.",
+                    e);
+        }
+        dynamoDB = new AmazonDynamoDBClient(credentials);
+        Region usWest2 = Region.getRegion(Regions.US_WEST_2);
+        dynamoDB.setRegion(usWest2);
     }
 }
