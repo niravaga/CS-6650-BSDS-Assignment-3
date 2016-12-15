@@ -39,6 +39,7 @@ public class KafkaPublisherResource {
     @Consumes(MediaType.TEXT_PLAIN)
     @Produces(MediaType.TEXT_PLAIN)
     public String registerPublisher(String topic) {
+        System.out.println("Registering publisher.");
 
         AWSCredentials credentials = null;
 
@@ -61,6 +62,8 @@ public class KafkaPublisherResource {
             Map<String, AttributeValue> item = newItem(publisherId.toString(), topic);
             PutItemRequest putItemRequest = new PutItemRequest(tableName, item);
             PutItemResult putItemResult = dynamoDB.putItem(putItemRequest);
+            System.out.println("Result: " + putItemResult);
+            System.out.println("Attributes" + putItemResult.toString());
 
         } catch (AmazonServiceException ase) {
             System.out.println("Caught an AmazonServiceException, which means your request made it "

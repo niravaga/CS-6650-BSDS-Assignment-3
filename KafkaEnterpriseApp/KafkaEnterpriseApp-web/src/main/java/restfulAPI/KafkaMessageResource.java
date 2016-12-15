@@ -39,7 +39,7 @@ import static restfulAPI.KafkaSubscriberResource.dynamoDB;
 @Path("/message")
 public class KafkaMessageResource {
 
-    static AmazonDynamoDBClient dynamoDB = null;
+    private AmazonDynamoDBClient dynamoDB = null;
     static Properties producerProperties = null;
     static Producer<String, String> producer = null;
 
@@ -55,7 +55,7 @@ public class KafkaMessageResource {
     @Produces(MediaType.TEXT_PLAIN)
     public String addMessage(@QueryParam("publisherId") String publisherId, String message) {
 
-        if (producerProperties == null) {
+        if (producerProperties == null || producer == null) {
             initProducerProperties();
         }
 
@@ -86,7 +86,7 @@ public class KafkaMessageResource {
 
             if (item != null) {
                 String topic = item.asMap().get("topic").toString();
-                System.out.println("Topic: " + topic);
+//                System.out.println("Topic: " + topic);
                 return topic;
             }
         } catch (AmazonServiceException ase) {
@@ -118,7 +118,7 @@ public class KafkaMessageResource {
         long offset = Long.parseLong((String) subscriberDetails.get("offset"));
 
         Properties props = new Properties();
-        props.put("bootstrap.servers", "localhost:9092");
+        props.put("bootstrap.servers", BSDSConstants.KAFKA_SERVER);
         props.put("group.id", subscriberId);
         props.put("enable.auto.commit", "true");
         props.put("auto.commit.interval.ms", "1000");
@@ -127,17 +127,19 @@ public class KafkaMessageResource {
         props.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
         KafkaConsumer<String, String> consumer = new KafkaConsumer<>(props);
         TopicPartition partition = new TopicPartition(subscribedTopic, 0);
-        consumer.assign(Arrays.asList(partition));
+        TopicPartition partition1 = new TopicPartition(subscribedTopic, 1);
+        TopicPartition partition2 = new TopicPartition(subscribedTopic, 2);
+        consumer.assign(Arrays.asList(partition, partition1, partition2));
 
         if (offset == 0) {
-            consumer.seekToBeginning(Arrays.asList(partition));
+            consumer.seekToBeginning(Arrays.asList(partition, partition1, partition2));
         }
 
         ConsumerRecords<String, String> records = consumer.poll(1000);
 
         String message = "";
 
-        System.out.println("NumRecords: " + records.count());
+//        System.out.println("NumRecords: " + records.count());
         for (ConsumerRecord<String, String> record : records) {
             message += record.value();
         }
@@ -218,7 +220,7 @@ public class KafkaMessageResource {
     
     private void initProducerProperties() {
         producerProperties = new Properties();
-        producerProperties.put("bootstrap.servers", "localhost:9092");
+        producerProperties.put("bootstrap.servers", BSDSConstants.KAFKA_SERVER);
         producerProperties.put("acks", "all");
         producerProperties.put("retries", 0);
         producerProperties.put("batch.size", 16384);

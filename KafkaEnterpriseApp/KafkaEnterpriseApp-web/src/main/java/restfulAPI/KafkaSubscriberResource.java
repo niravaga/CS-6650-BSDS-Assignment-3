@@ -38,6 +38,7 @@ public class KafkaSubscriberResource {
     @Consumes(MediaType.TEXT_PLAIN)
     @Produces(MediaType.TEXT_PLAIN)
     public String registerSubscriber(String topic) {
+        System.out.println("Registering subscriber.");
         UUID subscriberId = null;
         AWSCredentials credentials = null;
 
@@ -60,6 +61,8 @@ public class KafkaSubscriberResource {
             Map<String, AttributeValue> item = newItem(subscriberId.toString(), topic);
             PutItemRequest putItemRequest = new PutItemRequest(tableName, item);
             PutItemResult putItemResult = dynamoDB.putItem(putItemRequest);
+            System.out.println("Result: " + putItemResult);
+            System.out.println("Attributes" + putItemResult.toString());
 
             return subscriberId.toString();
         } catch (AmazonServiceException ase) {

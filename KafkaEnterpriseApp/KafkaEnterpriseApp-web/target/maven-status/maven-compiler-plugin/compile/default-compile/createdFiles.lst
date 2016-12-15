@@ -1,5 +1,6 @@
 restfulAPI\PingTest.class
 restfulAPI\ApplicationConfig.class
+restfulAPI\BSDSConstants.class
 restfulAPI\KafkaMessageResource.class
 restfulAPI\KafkaPublisherResource.class
 restfulAPI\KafkaSubscriberResource.class
