@@ -19,7 +19,7 @@ public class SubscriberClient {
     static CyclicBarrier barrier;
 
     public static void main(String[] args) {
-        int numThreads = 30;
+        int numThreads = 20;
 
         String topics[] = {
             "Sports",
@@ -31,7 +31,17 @@ public class SubscriberClient {
             "SeattleStartups",
             "HackerNews",
             "Weather",
-            "Recipes"};
+            "Recipes",
+        "Seattle",
+        "Portland",
+        "SanDiego",
+        "Mumbai",
+        "Jaipur",
+        "Chicago",
+        "Boston",
+        "Delhi",
+        "NewYork",
+        "WashingtonDC"};
 
         barrier = new CyclicBarrier(numThreads + 1);
 

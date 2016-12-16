@@ -16,9 +16,9 @@ public class PublisherClient {
         
     static CyclicBarrier barrier;
     public static void main(String[] args) {
-        int numThreads = 50;
+        int numThreads = 40;
 
-        int numMessages = 100;
+        int numMessages = 1000;
 
         String topics[] = {
             "Sports",
@@ -30,7 +30,17 @@ public class PublisherClient {
             "SeattleStartups",
             "HackerNews",
             "Weather",
-            "Recipes"};
+            "Recipes",
+            "Seattle",
+        "Portland",
+        "SanDiego",
+        "Mumbai",
+        "Jaipur",
+        "Chicago",
+        "Boston",
+        "Delhi",
+        "NewYork",
+        "WashingtonDC"};
 
         barrier = new CyclicBarrier(numThreads + 1);
 
